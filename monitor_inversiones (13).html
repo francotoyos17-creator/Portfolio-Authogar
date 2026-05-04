@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Monitor de Inversiones — Toyos e Hijos</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0b10;--card:#12131a;--card2:#181924;--border:#1e2030;--accent:#6366f1;--accent2:#818cf8;--green:#4ade80;--red:#f87171;--yellow:#fbbf24;--text:#e2e8f0;--muted:#64748b;--dim:#334155}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.header{background:linear-gradient(135deg,#0f1019,#161830);border-bottom:1px solid var(--border);padding:20px 24px}
+.header h1{font-size:22px;font-weight:800;background:linear-gradient(135deg,var(--accent2),var(--green));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.header p{color:var(--muted);font-size:12px;margin-top:4px}
+.tabs{display:flex;gap:4px;padding:12px 24px;background:var(--card);border-bottom:1px solid var(--border);overflow-x:auto}
+.tab{padding:8px 16px;border-radius:8px;border:none;cursor:pointer;font-size:13px;font-weight:600;background:transparent;color:var(--muted);transition:all .2s;white-space:nowrap}
+.tab.active{background:rgba(99,102,241,.15);color:var(--accent2)}
+.tab:hover:not(.active){background:rgba(255,255,255,.03);color:var(--text)}
+.content{padding:20px 24px;max-width:1300px;margin:0 auto}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-bottom:20px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;border-top:3px solid var(--accent)}
+.kpi-label{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:5px}
+.kpi-value{font-size:15px;font-weight:800;font-family:'Cascadia Code','Consolas',monospace}
+.kpi-sub{font-size:11px;margin-top:3px}
+.section{background:var(--card);border:1px solid var(--border);border-radius:12px;margin-bottom:14px;overflow:hidden}
+.section-hdr{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.section-hdr h3{font-size:15px;font-weight:700}
+.tbl{width:100%;border-collapse:collapse;font-size:12px}
+.tbl th{background:var(--card2);padding:9px 12px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);border-bottom:1px solid var(--border);position:sticky;top:0}
+.tbl th.r,.tbl td.r{text-align:right}
+.tbl td{padding:9px 12px;border-bottom:1px solid rgba(255,255,255,.03)}
+.tbl tr:hover{background:rgba(255,255,255,.02)}
+.tk{font-family:'Cascadia Code','Consolas',monospace;font-weight:700;font-size:12px}
+.mono{font-family:'Cascadia Code','Consolas',monospace;font-size:11px}
+.g{color:var(--green)}.rd{color:var(--red)}
+.tbl input{min-width:80px;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:4px;color:var(--yellow);font-family:'Cascadia Code','Consolas',monospace;font-size:11px;padding:4px 8px;width:95px;text-align:right}
+.tbl input:focus{outline:none;border-color:var(--accent)}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:9px;font-weight:700}
+.badge.auto{background:rgba(74,222,128,.1);color:var(--green)}
+.badge.manual{background:rgba(251,191,36,.1);color:var(--yellow)}
+.chart-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:14px;margin-bottom:20px}
+.chart-box{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px}
+.chart-box h4{font-size:14px;font-weight:600;margin-bottom:14px}
+.cat-hdr{background:var(--card2);padding:12px 18px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border)}
+.cat-hdr:hover{background:rgba(255,255,255,.03)}
+.cat-hdr h4{font-size:13px;font-weight:600;color:var(--accent2)}
+.cat-hdr .total{font-family:'Cascadia Code','Consolas',monospace;font-weight:700;font-size:13px}
+.hidden{display:none}
+.save-row{margin-bottom:14px;display:flex;gap:12px;align-items:center}
+.save-btn{background:var(--accent);color:white;border:none;padding:8px 20px;border-radius:8px;font-weight:600;cursor:pointer;font-size:13px}
+.status{padding:8px;font-size:12px;color:var(--green);display:none}
+.footer{padding:14px 24px;text-align:center;font-size:11px;color:var(--dim);border-top:1px solid var(--border)}
+.search{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;padding:8px 14px;color:var(--text);font-size:13px;width:300px;margin-bottom:16px}
+.search:focus{outline:none;border-color:var(--accent)}
+@media(max-width:768px){.cards{grid-template-columns:1fr 1fr}.chart-grid{grid-template-columns:1fr}.search{width:100%}}
+</style>
+</head>
+<body>
+<div class="header">
+<h1>Monitor de Inversiones</h1>
+<p>Casimiro Félix Toyos e Hijos S.A. — Tenencia al 19/03/2026 — TC MEP: $ 1.422,58 | Cable: $ 1.470,28</p>
+<div style="display:flex;align-items:center;gap:12px;margin-top:8px">
+<button onclick="fetchLive()" style="background:var(--green);color:#000;border:none;padding:6px 16px;border-radius:6px;font-weight:700;cursor:pointer;font-size:12px">Actualizar precios en vivo</button>
+<span id="liveStatus" style="font-size:11px;color:var(--green)"></span>
+</div>
+</div>
+<div class="tabs" id="tabs"></div>
+<div class="content" id="content"></div>
+<div class="footer">Panel de Inversiones v2.0 — Balanz actualizado al 19/03/2026 — Los precios editables se guardan en tu navegador</div>
+<script>
+const F=n=>n==null?'-':'$ '+Math.round(n).toLocaleString('es-AR');
+const P=v=>v==null||isNaN(v)?'-':(v>=0?'+':'')+v.toFixed(2)+'%';
+
+const DATA={
+balanz:{name:'Balanz Capital',color:'#6366f1',cats:{
+'Acciones':{i:[
+{tk:'AUSO',d:'Autopista del Sol',q:2773,bp:3645,v:10107585,gf:'BUE:AUSO'},
+{tk:'BPAT',d:'Banco Patagonia',q:5926,bp:2010,v:11911260,gf:'BUE:BPAT'},
+{tk:'BYMA',d:'Bolsas y Mercados Arg',q:107824,bp:315.5,v:34018472,gf:'BUE:BYMA'},
+{tk:'CEPU',d:'Central Puerto',q:5905,bp:2297,v:13563785,gf:'BUE:CEPU'},
+{tk:'GGAL',d:'Grupo Fin. Galicia',q:100,bp:6160,v:616000,gf:'BUE:GGAL'},
+{tk:'METR',d:'Metrogas',q:14877,bp:1995,v:29679615,gf:'BUE:METR'},
+{tk:'MIRG',d:'Mirgor',q:856.3,bp:18800,v:16098440,gf:'BUE:MIRG'},
+{tk:'PAMP',d:'Pampa Energía',q:16651,bp:5010,v:83421510,gf:'BUE:PAMP'},
+{tk:'SUPV',d:'Grupo Supervielle',q:20173,bp:2396,v:48334508,gf:'BUE:SUPV'},
+{tk:'TECO2',d:'Telecom Argentina',q:100,bp:3327.5,v:332750,gf:'BUE:TECO2'},
+{tk:'TGSU2',d:'Transp. Gas del Sur',q:5292,bp:9505,v:50300460,gf:'BUE:TGSU2'},
+{tk:'TRAN',d:'Transener',q:11372,bp:3705,v:42133260,gf:'BUE:TRAN'},
+{tk:'TXAR',d:'Ternium Argentina',q:20545,bp:640,v:13148800,gf:'BUE:TXAR'},
+{tk:'YPFD',d:'YPF S.A.',q:2682,bp:58150,v:155958300,gf:'BUE:YPFD'}]},
+'Bonos Soberanos':{i:[
+{tk:'AE38',d:'Bono Arg USD 2038',q:21194,bp:1096.6,v:23241340},
+{tk:'AL30',d:'Bono Arg USD 2030',q:40000,bp:867,v:34680000},
+{tk:'GD35',d:'Global USD 2035',q:32881,bp:1086.5,v:35725207},
+{tk:'GD38',d:'Global USD 2038',q:1674,bp:1134.2,v:1898651},
+{tk:'GD41',d:'Global USD 2041',q:95852,bp:1006.8,v:96503794},
+{tk:'BPOA7',d:'Bopreal 1A 2027',q:35817,bp:1508.5,v:54029945},
+{tk:'BPOB7',d:'Bopreal 1B 2027',q:10607,bp:1456,v:15443792},
+{tk:'BPOC7',d:'Bopreal 1C 2027',q:15294,bp:1456.8,v:22280299},
+{tk:'BPY26',d:'Bopreal S3 2026',q:19800,bp:508.6,v:10070280},
+{tk:'BPOD7',d:'Bopreal 1D 2027',q:26310,bp:1455.8,v:38302098},
+{tk:'TTJ26',d:'Dual Jun 2026',q:10703068,bp:1.52,v:16215148},
+{tk:'TTS26',d:'Dual Sep 2026',q:16060130,bp:1.5,v:24009894},
+{tk:'TTD26',d:'Dual Dic 2026',q:64646249,bp:1.49,v:95999680},
+{tk:'TX26',d:'Boncer 2% 2026',q:4465468,bp:12.88,v:57515228},
+{tk:'TZX26',d:'Boncer Jun 2026',q:5434362,bp:3.61,v:19637067},
+{tk:'TZXM6',d:'Boncer Mar 2026',q:22210000,bp:2.13,v:47275762},
+{tk:'TZXM7',d:'Boncer Mar 2027',q:7903200,bp:1.91,v:15067451},
+{tk:'TZXD6',d:'Boncer Dic 2026',q:5849023,bp:2.59,v:15134347},
+{tk:'TZX27',d:'Boncer Jun 2027',q:100000,bp:3.4,v:340450},
+{tk:'TZX28',d:'Boncer Jun 2028',q:347403,bp:3.03,v:10139284},
+{tk:'T15E7',d:'Bono Cap Ene 2027',q:7724160,bp:1.28,v:9856028},
+{tk:'T30A7',d:'Bono Cap Abr 2027',q:1000000,bp:1.15,v:1146500},
+{tk:'T30J6',d:'Bono Cap Jun 2026',q:1000000,bp:1.34,v:1342500}]},
+'CEDEARs':{i:[
+{tk:'BRKB',d:'Berkshire Hathaway',q:865,bp:32400,v:28026000,gf:'BUE:BRKB'},
+{tk:'COIN',d:'Coinbase',q:2880,bp:11080,v:31910400,gf:'BUE:COIN'},
+{tk:'ETHA',d:'iShares Ethereum ETF',q:1350,bp:4865,v:6567750,gf:'BUE:ETHA'},
+{tk:'GLOB',d:'Globant',q:100,bp:3625,v:362500,gf:'BUE:GLOB'},
+{tk:'IBIT',d:'iShares Bitcoin ETF',q:7420,bp:5930,v:44000600,gf:'BUE:IBIT'},
+{tk:'JPM',d:'JP Morgan',q:600,bp:28240,v:16944000,gf:'BUE:JPM'},
+{tk:'LLY',d:'Eli Lilly',q:1175,bp:24040,v:28247000,gf:'BUE:LLY'},
+{tk:'MELI',d:'MercadoLibre',q:1862,bp:20730,v:38599260,gf:'BUE:MELI'},
+{tk:'META',d:'Meta Platforms',q:720,bp:37700,v:27144000,gf:'BUE:META'},
+{tk:'MSTR',d:'MicroStrategy',q:11200,bp:10400,v:116480000,gf:'BUE:MSTR'},
+{tk:'NFLX',d:'Netflix',q:200,bp:2890,v:578000,gf:'BUE:NFLX'},
+{tk:'NVDA',d:'Nvidia',q:4389,bp:11070,v:48586230,gf:'BUE:NVDA'},
+{tk:'PAGS',d:'PagSeguro',q:1554,bp:4727.5,v:7346535,gf:'BUE:PAGS'},
+{tk:'SLV',d:'iShares Silver Trust',q:50,bp:16830,v:841500,gf:'BUE:SLV'},
+{tk:'V',d:'Visa',q:1005,bp:24440,v:24562200,gf:'BUE:V'},
+{tk:'VIST',d:'Vista Energy',q:38,bp:34020,v:1292760,gf:'BUE:VIST'},
+{tk:'WMT',d:'Walmart',q:100,bp:9990,v:999000,gf:'BUE:WMT'},
+{tk:'CVX',d:'Chevron',q:10,bp:18280,v:182800,gf:'BUE:CVX'},
+{tk:'KO',d:'Coca-Cola',q:10,bp:22350,v:223500,gf:'BUE:KO'},
+{tk:'LMT',d:'Lockheed Martin',q:5,bp:47180,v:235900,gf:'BUE:LMT'},
+{tk:'MSFT',d:'Microsoft',q:10,bp:19200,v:192000,gf:'BUE:MSFT'},
+{tk:'PBR',d:'Petrobras',q:10,bp:29080,v:290800,gf:'BUE:PBR'},
+{tk:'QQQ',d:'Invesco QQQ Trust',q:10,bp:43800,v:438000,gf:'BUE:QQQ'},
+{tk:'RTX',d:'Raytheon Technologies',q:5,bp:60225,v:301125,gf:'BUE:RTX'},
+{tk:'XOM',d:'Exxon Mobil',q:50,bp:23200,v:1160000,gf:'BUE:XOM'}]},
+'ONs / Corporativos':{i:[
+{tk:'IRCFO',d:'ON IRSA 8.75% 2028',q:23042,bp:1001.8,v:23083476},
+{tk:'IRCPO',d:'ON IRSA Inv 8% 2035',q:42841,bp:1556.6,v:66686301},
+{tk:'PLC4O',d:'ON Pluspetrol 8.5% 2032',q:12000,bp:1580.9,v:18970800},
+{tk:'TLCPO',d:'ON Telecom 9.25% 2033',q:35602,bp:1591,v:56642782},
+{tk:'VSCVO',d:'ON Vista 8.5% 2033',q:9000,bp:1587.2,v:14284800},
+{tk:'YFCJO',d:'ON YPF Energía 7.875% 2032',q:10000,bp:1560.8,v:15608000},
+{tk:'YM34O',d:'ON YPF 8.25% 2034',q:75833,bp:1536.1,v:116487071},
+{tk:'YMCIO',d:'ON YPF 2.5% 2029',q:17899,bp:1558.2,v:27890222}]},
+'Letras':{i:[
+{tk:'S17A6',d:'Lecap Abr 2026',q:42524023,bp:1.08,v:45881295},
+{tk:'S29Y6',d:'Lecap May 2026',q:33780613,bp:1.25,v:42310556},
+{tk:'S30N6',d:'Lecap Nov 2026',q:40861836,bp:1.06,v:43436132},
+{tk:'S30O6',d:'Lecap Oct 2026',q:100000,bp:1.14,v:113800},
+{tk:'S31G6',d:'Lecap Ago 2026',q:38348676,bp:1.12,v:43034884},
+{tk:'X29Y6',d:'Lecer May 2026',q:9500000,bp:1.11,v:10578250}]},
+'FCIs ARS':{i:[
+{tk:'BCMMA',d:'Money Market',q:28201342.84,bp:11.44,v:322528183},
+{tk:'LECAPSA',d:'Lecaps',q:165125283.29,bp:1.90,v:314064821},
+{tk:'LONGPesosA',d:'Long Pesos',q:64445987.26,bp:1.95,v:125685658},
+{tk:'SOJAA',d:'Soja',q:46524024.68,bp:1.66,v:77455895},
+{tk:'BCRFA',d:'Dólar Linked',q:217256.11,bp:221.47,v:48114837},
+{tk:'BCAPYB',d:'Capital Pymes',q:557800.86,bp:67.17,v:37470107},
+{tk:'BCAHA',d:'Ahorro CP',q:90278.99,bp:219.13,v:19783237},
+{tk:'OPPORA',d:'Opportunity',q:268351.72,bp:37.12,v:9961531},
+{tk:'CPRIVADOA',d:'Crédito Privado',q:3833353.39,bp:1.31,v:5004316},
+{tk:'PER3A',d:'ONs FCI',q:234863.43,bp:8.89,v:2087759},
+{tk:'INSTITUA',d:'Inflation Linked',q:155718.3,bp:105.83,v:16480152}]},
+'FCIs USD':{i:[
+{tk:'ESTRA1A',d:'Dólar Corto Plazo',q:186979.26,bp:1.15,v:214642,usd:true,usdVal:214642,arsVal:305348539},
+{tk:'BCMMUSDA',d:'Money Market USD',q:120192.21,bp:1.02,v:122828,usd:true,usdVal:122828,arsVal:174771188},
+{tk:'BAHUSDA',d:'Corporativo USD',q:131128.2,bp:1.39,v:181948,usd:true,usdVal:181948,arsVal:258880968}]},
+}},
+provincia:{name:'Banco Provincia',color:'#22c55e',cats:{
+'Acciones':{i:[
+{tk:'ALUA',d:'Aluar',q:1731,bp:811,v:1403841,gf:'BUE:ALUA'},
+{tk:'BBAR',d:'Banco BBVA Arg',q:2259,bp:6390,v:14435010,gf:'BUE:BBAR'},
+{tk:'BMA',d:'Banco Macro',q:3709,bp:9765,v:36218385,gf:'BUE:BMA'},
+{tk:'CRES',d:'Cresud',q:10861,bp:1704,v:18507144,gf:'BUE:CRES'},
+{tk:'GGAL',d:'Grupo Fin. Galicia',q:34160,bp:6160,v:210425600,gf:'BUE:GGAL'},
+{tk:'IRSA',d:'IRSA',q:218,bp:2105,v:458890,gf:'BUE:IRSA'},
+{tk:'METR',d:'Metrogas',q:24752,bp:1995,v:49380240,gf:'BUE:METR'},
+{tk:'PAMP',d:'Pampa Energía',q:83344,bp:5010,v:417553440,gf:'BUE:PAMP'},
+{tk:'TGNO4',d:'Transp. Gas del Norte',q:5375,bp:4413,v:23703750,gf:'BUE:TGNO4'},
+{tk:'YPFD',d:'YPF S.A.',q:17937,bp:58150,v:1043036550,gf:'BUE:YPFD'},
+{tk:'AJUSTE',d:'Ajuste valuación Feb 28 (precios Ene→Feb)',q:null,bp:null,v:-170531958.12,fixed:true}]},
+'Bonos':{i:[
+{tk:'AL30',d:'Bono Arg USD 2030',q:331620,bp:867,v:287514540},
+{tk:'AL35',d:'Bono Arg USD 2035',q:117805,bp:1069.9,v:126039570},
+{tk:'AL41',d:'Bono Arg USD 2041',q:65502,bp:985.8,v:64571872},
+{tk:'TX26',d:'Boncer 2% 2026',q:830105,bp:11.875,v:9857497},
+{tk:'TZX26',d:'Boncer Jun 2026',q:7815600,bp:3.324,v:25979054},
+{tk:'BPOC7',d:'Bopreal 1C 2027',q:7148,bp:1495,v:10686260},
+{tk:'BPY26',d:'Bopreal S3 2026',q:25000,bp:1050,v:26250000},
+{tk:'GD38',d:'Bono Global USD 2038',q:34969,bp:1100,v:38465900},
+{tk:'BPO4A',d:'Bopreal 4A 2028',q:8071,bp:1300,v:10492300},
+{tk:'SPY',d:'SPDR S&P 500 ETF',q:529,bp:48680,v:25751720,gf:'BUE:SPY'}]},
+'FCIs Pesos':{i:[
+{tk:'RAICES_AH',d:'Raíces Ahorro Pesos',q:22947289,bp:34.53,v:792320376},
+{tk:'RAICES_VF',d:'Raíces Valores Fiduciarios',q:335844,bp:213.28,v:71633496},
+{tk:'RAICES_INF',d:'Raíces Infraestructura',q:21082235,bp:6.997,v:147513956}]},
+'FCIs USD':{i:[
+{tk:'RAICES_USD',d:'Raíces Dólares Plus',q:65643,bp:1.266,v:118131843}]},
+}},
+mdp:{name:'MDP Bursátil',color:'#ef4444',cats:{
+'Títulos y Acciones':{i:[
+{tk:'AL30',d:'Bono Arg USD 2030',q:16770,bp:857.4,v:14378598},
+{tk:'AL29',d:'Bono Arg USD 2029',q:2364,bp:875.5,v:2069682},
+{tk:'YMCXO',d:'ON YPF CL31',q:4447,bp:1631,v:7253057},
+{tk:'YM34O',d:'ON YPF 8.25% 2034',q:4457,bp:1529,v:6814753}]},
+}},
+credicoop:{name:'Banco Credicoop',color:'#f97316',cats:{
+'FCIs':{i:[
+{tk:'1810_AHORRO',d:'1810 Ahorro',q:394638,bp:217.36,v:85778576}]},
+}},
+frances:{name:'Banco Francés',color:'#3b82f6',cats:{
+'FCIs':{i:[
+{tk:'FBA_RENPEB',d:'FBA Renta en Pesos B',q:48659,bp:176.59,v:8592658.75}]},
+}},
+galicia:{name:'Banco Galicia',color:'#f59e0b',cats:{
+'FCIs':{i:[
+{tk:'FCI_GAL',d:'FCI Galicia (Fima Premium)',q:null,bp:null,v:486496856.75,fixed:true}]},
+}},
+usd:{name:'USD — Dólares, M/E y Caja de Valores',color:'#8b5cf6',usdView:true,cats:{
+'Cuentas Bancarias USD':{i:[
+{tk:'PROV_USD',d:'Caja Ahorro USD — Banco Provincia',q:null,bp:null,v:70513256.10,fixed:true,usd:49079.05},
+{tk:'MDP_USD',d:'Dólares — MDP Bursátil',q:null,bp:null,v:12602534.10,fixed:true,usd:8772.17},
+{tk:'CREDI_USD',d:'Dólares billete — Credicoop',q:null,bp:null,v:6687545.40,fixed:true,usd:4654.37},
+{tk:'FRANCES_USD',d:'Cta Cte USD — Banco Francés',q:null,bp:null,v:1986979.53,fixed:true,usd:1383.04},
+{tk:'CREDI_CC',d:'Cta Cte USD — Credicoop',q:null,bp:null,v:375462.20,fixed:true,usd:261.37},
+{tk:'ME_GENERAL',d:'Moneda Extranjera — General',q:null,bp:null,v:1306980,fixed:true,usd:909.47}]},
+'Caja de Valores':{i:[
+{tk:'BALANZ_CV',d:'Caja de Valores — Balanz Capital',q:null,bp:null,v:22960061.15,fixed:true,usd:15978.91},
+{tk:'MDP_CV',d:'Caja de Valores — MDP Bursátil',q:null,bp:null,v:138338,fixed:true,usd:96.27},
+{tk:'AJUSTE_CV',d:'Ajuste redondeo contable',q:null,bp:null,v:-3,fixed:true,usd:0}]},
+}},
+};
+
+const EVO={
+'Balanz (inc. Cera)':{c:'#6366f1',d:{
+'Jul 25':731271920,'Sep 25':766771864,'Nov 25':793391956,
+'Dic 25':3884422762,'Ene 26':3900634875,'Feb 26':3758539030,'Mar 26':3824677737}},
+'MDP Bursátil':{c:'#ef4444',d:{
+'Abr 25':32620199,'May 25':33320234,'Jun 25':33866167,'Jul 25':37614684,
+'Ago 25':37251202,'Sep 25':35874337,'Oct 25':43109916,'Nov 25':43795906,
+'Dic 25':44791024,'Ene 26':44621425,'Feb 26':43772678}},
+'Provincia (T&A)':{c:'#22c55e',d:{
+'Jun 25':1438650431,'Ago 25':1491435278,'Sep 25':1262612142,
+'Nov 25':1979104321,'Dic 25':1930540305,'Ene 26':2028399580,'Feb 26':2270199605}},
+};
+
+
+const COSTS={
+// ACCIONES
+'AUSO':{c:2920,d:'Mar 2025'},'BMA':{c:9735,d:'Oct 2024'},'BPAT':{c:2374.48,d:'Jun 2024'},
+'BYMA':{c:227.41,d:'Ene 2025'},'CEPU':{c:2540,d:'Ene 2026'},'GGAL':{c:6579.72,d:'Jul 2024'},
+'METR':{c:1765.57,d:'Jul 2024'},'MIRG':{c:24624.51,d:'Dic 2024'},'PAMP':{c:3153.43,d:'Jul 2024'},
+'SUPV':{c:3006.98,d:'Dic 2024'},'TECO2':{c:3362.50,d:'Jul 2024'},'TGSU2':{c:7893.28,d:'Ene 2025'},
+'TRAN':{c:2702.97,d:'Ene 2025'},'TXAR':{c:871.38,d:'Jun 2024'},'YPFD':{c:34532.44,d:'Jul 2024'},
+// CEDEARs
+'BRKB':{c:34680,d:'Ene 2026'},'COIN':{c:13735.57,d:'Ene 2026'},'ETHA':{c:7250,d:'Ene 2026'},
+'GLOB':{c:4032.50,d:'Ene 2026'},'IBIT':{c:8656.70,d:'Ago 2025'},'JPM':{c:33283.80,d:'Ene 2026'},
+'LLY':{c:29732.44,d:'Ene 2026'},'MELI':{c:26824.79,d:'Ene 2026'},'META':{c:41620,d:'Ene 2026'},
+'MSTR':{c:16417.39,d:'Dic 2024'},'NFLX':{c:2900,d:'Sep 2025'},'NVDA':{c:11389.61,d:'Jul 2024'},
+'PAGS':{c:5037.03,d:'Sep 2025'},'SLV':{c:20640,d:'Sep 2025'},'V':{c:28789.62,d:'Ene 2026'},
+'VIST':{c:27760,d:'Sep 2025'},'WMT':{c:10410,d:'Sep 2025'},
+'XOM':{c:22270,d:'Sep 2025'},'CVX':{c:18390,d:'Mar 2026'},'KO':{c:22930,d:'Mar 2026'},'LMT':{c:46960,d:'Mar 2026'},'MSFT':{c:19610,d:'Mar 2026'},'PBR':{c:29120,d:'Mar 2026'},'QQQ':{c:44520,d:'Mar 2026'},'RTX':{c:59800,d:'Mar 2026'},'BPY26':{c:503,d:'Oct 2025'},
+// BONOS
+'AE38':{c:1001.20,d:'Oct 2024'},'AL30':{c:388.43,d:'Oct 2024'},'GD35':{c:568.40,d:'Oct 2024'},
+'GD38':{c:708.04,d:'Oct 2024'},'GD41':{c:871.37,d:'Oct 2024'},
+'BPOA7':{c:1477.70,d:'Sep 2025'},'BPOB7':{c:1415.58,d:'Sep 2025'},
+'BPOC7':{c:1387.77,d:'Sep 2025'},'BPOD7':{c:1400.92,d:'Sep 2025'},
+'BPY26':{c:503,d:'Oct 2025'},
+'TTD26':{c:1.04,d:'Feb 2025'},'TTJ26':{c:1.17,d:'May 2025'},
+'TTS26':{c:1.21,d:'May 2025'},
+'TX26':{c:10.25,d:'Nov 2024'},'TZX26':{c:3.11,d:'Nov 2024'},
+'TZX27':{c:3.16,d:'Nov 2024'},'TZX28':{c:3.00,d:'Nov 2024'},
+'TZXD6':{c:1.69,d:'Ene 2025'},'TZXM6':{c:1.45,d:'Nov 2024'},'TZXM7':{c:1.25,d:'Ene 2025'},
+'T15E7':{c:1.21,d:'Ene 2026'},'T30A7':{c:1.13,d:'May 2025'},'T30J6':{c:1.32,d:'May 2025'},
+// ONs / CORPORATIVOS - PPC real Balanz 17/03/2026
+'IRCFO':{c:831.93,d:'Mar 2025'},'IRCPO':{c:1470.46,d:'Jul 2025'},
+'PLC4O':{c:1498.85,d:'Sep 2025'},'TLCPO':{c:1617.94,d:'Sep 2025'},
+'VSCVO':{c:1537.87,d:'Sep 2025'},'YFCJO':{c:1472.15,d:'Sep 2025'},
+'YM34O':{c:1467.63,d:'Jul 2025'},'YMCIO':{c:1118.28,d:'Dic 2024'},
+// FCIs PESOS - PPC real Balanz 17/03/2026
+'BCAHA':{c:216,d:'Nov 2024'},'BCAPYB':{c:59.12,d:'Ago 2025'},
+'BCMMA':{c:10.97,d:'May 2025'},'BCRFA':{c:222.64,d:'May 2025'},
+'INSTITUA':{c:103.72,d:'Nov 2024'},'LONGPesosA':{c:1.59,d:'May 2025'},
+'OPPORA':{c:36.59,d:'Sep 2025'},'LECAPSA':{c:1.79,d:'Dic 2024'},
+'PER3A':{c:8.52,d:'Sep 2025'},'SOJAA':{c:1.69,d:'Sep 2025'},
+// FCIs USD - PPC real Balanz 17/03/2026
+'BAHUSDA':{c:1.36,d:'Ene 2025'},'BCMMUSDA':{c:1.02,d:'Ene 2025'},
+'ESTRA1A':{c:1.14,d:'Ago 2025'},
+// LETRAS - PPC real Balanz 17/03/2026
+'S17A6':{c:1.07,d:'Ene 2026'},'S29Y6':{c:1.19,d:'Ene 2026'},
+'S30N6':{c:1.01,d:'Ene 2026'},'S30O6':{c:1.10,d:'Ene 2026'},
+'S31G6':{c:1.06,d:'Ene 2026'},'X29Y6':{c:1.11,d:'Ene 2026'},
+
+// PROVINCIA - PPC contable (datos contadora)
+'P_ALUA':{c:910,d:'Dic 2024'},'P_BBAR':{c:8860,d:'Ene 2025'},'P_BMA':{c:10716,d:'Mar 2024'},
+'P_CRES':{c:928.45,d:'Mar 2024'},'P_GGAL':{c:5046.24,d:'Abr 2024'},
+'P_IRSA':{c:2320,d:'Nov 2025'},'P_METR':{c:2028.85,d:'Mar 2025'},
+'P_PAMP':{c:2584.63,d:'Abr 2024'},'P_TGNO4':{c:2823.53,d:'May 2024'},
+'P_YPFD':{c:27476.78,d:'Abr 2024'},
+'P_TX26':{c:18.05,d:'Mar 2025'},'P_TZX26':{c:2.56,d:'Mar 2025'},
+'P_AL30':{c:669.3,d:'Oct 2024'},'P_AL35':{c:576.89,d:'Oct 2024'},
+'P_AL41':{c:458,d:'Abr 2024'},'P_BPOC7':{c:1398.5,d:'Nov 2025'},
+'P_BPY26':{c:503,d:'Abr 2024'},'P_SPY':{c:28368,d:'Mar 2025'},'P_GD38':{c:858.5,d:'Nov 2025'},'P_BPO4A':{c:1238.9,d:'Nov 2025'},
+};
+
+const TC_MEP=1422.58;
+let SP={};try{SP=JSON.parse(localStorage.getItem('mp2')||'{}')}catch(e){}
+const gP=(b,c,i)=>{const k=`${b}_${c}_${i}`;return SP[k]!==undefined?SP[k]:DATA[b].cats[c].i[i].bp};
+const sP=(b,c,i,v)=>{SP[`${b}_${c}_${i}`]=v;localStorage.setItem('mp2',JSON.stringify(SP))};
+const cV=(it,p,userEdited)=>{if(it.usd)return it.arsVal||it.v;if(it.fixed)return it.v;if(!userEdited)return it.v;if(it.q==null||p==null)return it.v;return it.q*p};
+const bT=bk=>{let t=0;Object.entries(DATA[bk].cats).forEach(([c,{i:items}])=>{items.forEach((it,idx)=>{const k=`${bk}_${c}_${idx}`;const ue=SP[k]!==undefined;t+=cV(it,gP(bk,c,idx),ue)})});return t};
+
+let AT='overview',SF='';
+const tabsEl=document.getElementById('tabs'),contentEl=document.getElementById('content');
+
+function rT(){
+const tabs=[{id:'overview',l:'Resumen'},...Object.entries(DATA).map(([k,v])=>({id:k,l:v.name}))];
+tabsEl.innerHTML=tabs.map(t=>`<button class="tab ${t.id===AT?'active':''}" onclick="sT('${t.id}')">${t.l}</button>`).join('');
+}
+function sT(id){AT=id;SF='';rT();rR()}
+
+function rR(){AT==='overview'?rO():rB(AT)}
+
+function rO(){
+const tots={};let G=0;
+Object.keys(DATA).forEach(b=>{tots[b]=bT(b);G+=tots[b]});
+let h='<div class="cards">';
+h+=`<div class="kpi" style="border-top-color:#818cf8"><div class="kpi-label">Tenencia Total</div><div class="kpi-value">${F(G)}</div><div class="kpi-sub" style="color:var(--green)">Cuadra con balance contable</div></div>`;
+Object.entries(DATA).forEach(([b,{name:n,color:cl,cats}])=>{
+let bkV=0,bkC=0;
+Object.entries(cats).forEach(([cat,{i:items}])=>{
+items.forEach((it,idx)=>{
+const k=`${b}_${cat}_${idx}`;const ue=SP[k]!==undefined;
+const val=cV(it,gP(b,cat,idx),ue);
+const cs=COSTS[b==='provincia'?'P_'+it.tk:it.tk]||COSTS[it.tk];const cost=cs&&it.q?(it.usd?it.q*cs.c*TC_MEP:it.q*cs.c):val;
+bkV+=val;bkC+=cost;
+});});
+const bkPnl=bkV-bkC;const bkPct=bkC>0?((bkV-bkC)/bkC*100):0;
+const pnlColor=bkPnl>=0?'var(--green)':'var(--red)';
+const pnlText=Math.abs(bkPnl)>1?`<div class="kpi-sub" style="color:${pnlColor};font-weight:600">Rdo: ${F(bkPnl)} (${P(bkPct)})</div>`:'';
+h+=`<div class="kpi" style="border-top-color:${cl}"><div class="kpi-label">${n}</div><div class="kpi-value" style="font-size:13px">${F(tots[b])}</div>${pnlText}</div>`;
+});
+h+=`<div class="kpi" style="border-top-color:#fbbf24"><div class="kpi-label">TC MEP</div><div class="kpi-value">$ 1.422,58</div></div>`;
+h+='</div>';
+
+// Rendimiento acumulado por ALyC
+h+='<div class="section"><div class="section-hdr"><h3>Rendimiento Acumulado por ALyC / Banco</h3></div>';
+h+='<table class="tbl"><tr><th>ALyC / Banco</th><th>Categoría</th><th class="r">Valor Actual</th><th class="r">Costo Total</th><th class="r">Rendimiento $</th><th class="r">Rendimiento %</th></tr>';
+
+Object.entries(DATA).forEach(([bk,{name:bkName,color:bkColor,cats}])=>{
+let bkVal=0,bkCost=0,first=true;
+const catRows=[];
+Object.entries(cats).forEach(([cat,{i:items}])=>{
+let catVal=0,catCost=0;
+items.forEach((it,idx)=>{
+const k=`${bk}_${cat}_${idx}`;
+const ue=SP[k]!==undefined;
+const val=cV(it,gP(bk,cat,idx),ue);
+const cs=COSTS[bk==='provincia'?'P_'+it.tk:it.tk]||COSTS[it.tk];
+const cost=cs&&it.q?(it.usd?it.q*cs.c*TC_MEP:it.q*cs.c):val;
+catVal+=val;catCost+=cost;
+});
+bkVal+=catVal;bkCost+=catCost;
+const catPnl=catVal-catCost;
+const catPct=catCost>0?((catVal-catCost)/catCost*100):0;
+catRows.push({cat,catVal,catCost,catPnl,catPct});
+});
+const bkPnl=bkVal-bkCost;
+const bkPct=bkCost>0?((bkVal-bkCost)/bkCost*100):0;
+
+// Broker header row
+h+=`<tr style="background:var(--card2)">`;
+h+=`<td style="font-weight:700;color:${bkColor}">${bkName}</td>`;
+h+=`<td style="color:var(--muted)">TOTAL</td>`;
+h+=`<td class="r mono" style="font-weight:700">${F(bkVal)}</td>`;
+h+=`<td class="r mono" style="color:var(--muted)">${F(bkCost)}</td>`;
+h+=`<td class="r mono ${bkPnl>=0?'g':'rd'}" style="font-weight:700">${F(bkPnl)}</td>`;
+h+=`<td class="r mono ${bkPct>=0?'g':'rd'}" style="font-weight:700">${P(bkPct)}</td>`;
+h+=`</tr>`;
+
+// Category detail rows
+catRows.forEach(({cat,catVal,catCost,catPnl,catPct})=>{
+if(Math.abs(catPnl)<1)return;
+h+=`<tr>`;
+h+=`<td></td>`;
+h+=`<td style="color:var(--muted);font-size:11px;padding-left:20px">${cat}</td>`;
+h+=`<td class="r mono" style="font-size:11px">${F(catVal)}</td>`;
+h+=`<td class="r mono" style="font-size:11px;color:var(--muted)">${F(catCost)}</td>`;
+h+=`<td class="r mono ${catPnl>=0?'g':'rd'}" style="font-size:11px">${F(catPnl)}</td>`;
+h+=`<td class="r mono ${catPct>=0?'g':'rd'}" style="font-size:11px">${P(catPct)}</td>`;
+h+=`</tr>`;
+});
+});
+
+h+='</table></div>';
+
+h+='<div class="chart-grid">';
+h+='<div class="chart-box"><h4>Composición por ALyC / Banco</h4><canvas id="c1"></canvas></div>';
+h+='<div class="chart-box"><h4>Composición por Tipo de Activo</h4><canvas id="c2"></canvas></div>';
+h+='</div><div class="chart-grid">';
+h+='<div class="chart-box"><h4>Evolución Balanz (inc. Cera)</h4><canvas id="c3"></canvas></div>';
+h+='<div class="chart-box"><h4>Evolución MDP Bursátil</h4><canvas id="c4"></canvas></div>';
+h+='</div>';
+h+='<div class="chart-grid">';
+h+='<div class="chart-box"><h4>Evolución Provincia (T&A)</h4><canvas id="c7"></canvas></div>';
+h+='<div class="chart-box"><h4>Evolución Comparativa</h4><canvas id="c8"></canvas></div>';
+h+='</div>';
+h+='<div class="chart-grid">';
+h+='<div class="chart-box"><h4>Distribución por ALyC / Banco</h4><canvas id="c5"></canvas></div>';
+h+='<div class="chart-box"><h4>Top 10 P&L — Ganancia/Pérdida desde compra</h4><canvas id="c6"></canvas></div>';
+h+='</div>';
+
+// Contable breakdown
+h+='<div class="section"><div class="section-hdr"><h3>Conciliación con Balance Contable</h3><span>'+F(G)+'</span></div>';
+h+='<table class="tbl"><tr><th>Cuenta Contable</th><th>Concepto</th><th class="r">Saldo $</th><th class="r">% del Total</th></tr>';
+const contable=[
+['11010400','Bancos Cta Cte Dólar',72875697.83],
+['11010500','Moneda Extranjera',20597059.50],
+['11010700','Valores Negociables',23098399.15],
+['11040100','Plazos Fijos',0],
+['11040300','Títulos y Acciones',4410736334.88],
+['11040400','Fondos Comunes de Inversión',3170699814.84],
+];
+contable.forEach(([cta,desc,val])=>{
+h+=`<tr><td class="mono">${cta}</td><td>${desc}</td><td class="r mono" style="font-weight:700">${F(val)}</td><td class="r mono">${val>0?((val/7698007306.20)*100).toFixed(1)+'%':'-'}</td></tr>`;
+});
+h+=`<tr style="background:var(--card2)"><td></td><td style="font-weight:700;color:var(--accent2)">TOTAL TENENCIA INVERSIONES</td><td class="r mono" style="font-weight:800;font-size:14px">${F(7698007306.20)}</td><td class="r mono" style="font-weight:700">100%</td></tr>`;
+h+='</table></div>';
+
+// Top 15
+const all=[];
+Object.entries(DATA).forEach(([bk,{name:n,cats}])=>{Object.entries(cats).forEach(([cat,{i:items}])=>{items.forEach((it,idx)=>{const k2=`${bk}_${cat}_${idx}`;all.push({...it,broker:n,cat,val:cV(it,gP(bk,cat,idx),SP[k2]!==undefined)})})})});
+all.sort((a,b)=>b.val-a.val);
+h+='<div class="section"><div class="section-hdr"><h3>Top 15 Posiciones por Valor</h3></div>';
+h+='<table class="tbl"><tr><th>Ticker</th><th>Descripción</th><th>ALyC</th><th>Categoría</th><th class="r">Valor $</th></tr>';
+all.slice(0,15).forEach(i=>{h+=`<tr><td class="tk">${i.tk}</td><td style="color:var(--muted)">${i.d}</td><td>${i.broker}</td><td>${i.cat}</td><td class="r mono" style="font-weight:700">${F(i.val)}</td></tr>`});
+h+='</table></div>';
+
+contentEl.innerHTML=h;
+
+setTimeout(()=>{
+// Pie by broker
+const bLabels=Object.values(DATA).map(d=>d.name);
+const bData=Object.keys(DATA).map(k=>tots[k]);
+const bColors=Object.values(DATA).map(d=>d.color);
+new Chart(document.getElementById('c1'),{type:'doughnut',data:{labels:bLabels,datasets:[{data:bData,backgroundColor:bColors,borderWidth:0}]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{color:'#94a3b8',font:{size:10}}}}}});
+
+// By type - unified categories
+const typeMap={
+'Acciones':'Acciones Argentinas','Bonos Soberanos':'Bonos','Bonos':'Bonos',
+'CEDEARs':'CEDEARs','ONs / Corporativos':'ONs / Corporativos','ONs':'ONs / Corporativos',
+'Letras':'Bonos','FCIs ARS':'Fondos en Pesos','FCIs Pesos':'Fondos en Pesos',
+'FCIs USD':'Fondos en USD','FCIs Raíces':'Fondos en Pesos','FCIs':'Fondos en Pesos',
+'Cuentas Bancarias USD':'USD Líquido','Caja de Valores':'USD Líquido',
+'Títulos y Acciones':'Bonos','Dólares y Caja de Valores':'USD Líquido',
+'Dólares':'USD Líquido','Cta Cte USD':'USD Líquido','Moneda Extranjera':'USD Líquido',
+'Saldo Cta Cte (caja valores)':'USD Líquido',
+};
+const types={};
+Object.entries(DATA).forEach(([bk,{cats}])=>{Object.entries(cats).forEach(([cat,{i:items}])=>{
+const mapped=typeMap[cat]||cat;
+items.forEach((it,idx)=>{const kt=`${bk}_${cat}_${idx}`;types[mapped]=(types[mapped]||0)+cV(it,gP(bk,cat,idx),SP[kt]!==undefined)})})});
+const srt=Object.entries(types).sort((a,b)=>b[1]-a[1]);
+const tc=['#6366f1','#22c55e','#f59e0b','#ef4444','#3b82f6','#f97316','#8b5cf6'];
+new Chart(document.getElementById('c2'),{type:'doughnut',data:{labels:srt.map(s=>s[0]),datasets:[{data:srt.map(s=>s[1]),backgroundColor:tc.slice(0,srt.length),borderWidth:0}]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{color:'#94a3b8',font:{size:10}}}}}});
+
+// Evolution
+const eB=EVO['Balanz (inc. Cera)'];
+new Chart(document.getElementById('c3'),{type:'line',data:{labels:Object.keys(eB.d),datasets:[{label:'Balanz',data:Object.values(eB.d),borderColor:eB.c,backgroundColor:eB.c+'20',fill:true,tension:.3,pointRadius:4}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{ticks:{color:'#64748b',callback:v=>'$'+(v/1e9).toFixed(2)+'B'},grid:{color:'#1e293b'}},x:{ticks:{color:'#64748b'},grid:{display:false}}}}});
+const eM=EVO['MDP Bursátil'];
+new Chart(document.getElementById('c4'),{type:'line',data:{labels:Object.keys(eM.d),datasets:[{label:'MDP',data:Object.values(eM.d),borderColor:eM.c,backgroundColor:eM.c+'20',fill:true,tension:.3,pointRadius:3}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{ticks:{color:'#64748b',callback:v=>'$'+(v/1e6).toFixed(0)+'M'},grid:{color:'#1e293b'}},x:{ticks:{color:'#64748b',font:{size:9}},grid:{display:false}}}}});
+
+// Provincia T&A chart
+const eP=EVO['Provincia (T&A)'];
+new Chart(document.getElementById('c7'),{type:'line',data:{labels:Object.keys(eP.d),datasets:[{label:'Provincia',data:Object.values(eP.d),borderColor:eP.c,backgroundColor:eP.c+'20',fill:true,tension:.3,pointRadius:4}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{ticks:{color:'#64748b',callback:v=>'$'+(v/1e9).toFixed(1)+'B'},grid:{color:'#1e293b'}},x:{ticks:{color:'#64748b',font:{size:9}},grid:{display:false}}}}});
+
+// Comparative chart - all ALyCs normalized
+const allMonths=['Jul 25','Ago 25','Sep 25','Oct 25','Nov 25','Dic 25','Ene 26','Feb 26'];
+const compDS=Object.entries(EVO).map(([name,{c:color,d}])=>{
+const data=allMonths.map(m=>d[m]||null);
+return{label:name,data,borderColor:color,backgroundColor:'transparent',tension:.3,pointRadius:3,spanGaps:true};
+});
+new Chart(document.getElementById('c8'),{type:'line',data:{labels:allMonths,datasets:compDS},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{color:'#94a3b8',font:{size:10}}}},scales:{y:{ticks:{color:'#64748b',callback:v=>{if(v>=1e9)return'$'+(v/1e9).toFixed(1)+'B';return'$'+(v/1e6).toFixed(0)+'M'}},grid:{color:'#1e293b'}},x:{ticks:{color:'#64748b',font:{size:9}},grid:{display:false}}}}});
+
+// Bar chart by ALyC
+try{
+const bkNames=Object.values(DATA).map(d=>d.name);
+const bkTots=Object.keys(DATA).map(k=>tots[k]);
+const bkCols=Object.values(DATA).map(d=>d.color);
+new Chart(document.getElementById('c5'),{type:'bar',data:{labels:bkNames,datasets:[{data:bkTots,backgroundColor:bkCols,borderWidth:0,borderRadius:6}]},options:{responsive:true,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#64748b',callback:v=>'$'+(v/1e9).toFixed(1)+'B'},grid:{color:'#1e293b'}},y:{ticks:{color:'#94a3b8',font:{size:11}},grid:{display:false}}}}});
+
+// Top P&L chart
+const pnlAll=[];
+Object.entries(DATA).forEach(([bk,{cats}])=>{Object.entries(cats).forEach(([cat,{i:items}])=>{items.forEach((it,idx)=>{
+const cs=COSTS[bk==='provincia'?'P_'+it.tk:it.tk]||COSTS[it.tk];if(!cs||!it.q||it.fixed)return;
+const cp2=gP(bk,cat,idx);const pnl=it.q*(cp2-cs.c);
+pnlAll.push({tk:it.tk,pnl})})})});
+pnlAll.sort((a,b)=>b.pnl-a.pnl);
+const topPnl=[...pnlAll.slice(0,5),...pnlAll.slice(-5)].sort((a,b)=>b.pnl-a.pnl);
+new Chart(document.getElementById('c6'),{type:'bar',data:{labels:topPnl.map(p=>p.tk),datasets:[{data:topPnl.map(p=>p.pnl),backgroundColor:topPnl.map(p=>p.pnl>=0?'#4ade80':'#f87171'),borderWidth:0,borderRadius:4}]},options:{responsive:true,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#64748b',callback:v=>v>=0?'+$'+(v/1e6).toFixed(1)+'M':'-$'+(-v/1e6).toFixed(1)+'M'},grid:{color:'#1e293b'}},y:{ticks:{color:'#94a3b8',font:{size:11}},grid:{display:false}}}}});
+}catch(e){console.log('Chart error:',e)}
+},50);
+}
+
+function rB(bk){
+const broker=DATA[bk],total=bT(bk);
+let h=`<div class="section"><div class="section-hdr" style="background:linear-gradient(135deg,${broker.color}11,transparent)">`;
+h+=`<h3><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${broker.color};margin-right:10px"></span>${broker.name}</h3>`;
+const brokerUsd=broker.usdView?Object.values(broker.cats).reduce((s,{i:items})=>s+items.reduce((ss,it)=>ss+(it.usd||0),0),0):0;
+const totalLabel=broker.usdView?`USD ${brokerUsd.toLocaleString('es-AR',{minimumFractionDigits:2})} | ${F(total)}`:F(total);
+h+=`<span style="font-family:'Cascadia Code',monospace;font-size:16px;font-weight:800">${totalLabel}</span></div></div>`;
+h+=`<div class="save-row"><button class="save-btn" onclick="doSave()">Guardar precios</button><span class="status" id="ss">Guardado</span>`;
+h+=`<input class="search" placeholder="Buscar ticker..." oninput="SF=this.value;rB('${bk}');" value="${SF}"></div>`;
+
+Object.entries(broker.cats).forEach(([cat,{i:items}])=>{
+let filtered=items;
+if(SF){const t=SF.toLowerCase();filtered=items.filter(x=>x.tk.toLowerCase().includes(t)||x.d.toLowerCase().includes(t))}
+if(filtered.length===0)return;
+const catT=filtered.reduce((s,it,idx)=>{const oi=items.indexOf(it);const kc=`${bk}_${cat}_${oi}`;return s+cV(it,gP(bk,cat,oi),SP[kc]!==undefined)},0);
+const catUsd=filtered.reduce((s,it)=>s+(it.usd||0),0);
+const cid=`c_${bk}_${cat.replace(/\W/g,'')}`;
+const isUsdBk2=broker.usdView||false;
+const catLabel=isUsdBk2?`USD ${catUsd.toLocaleString('es-AR',{minimumFractionDigits:2})} | ${F(catT)}`:F(catT);
+h+=`<div class="section"><div class="cat-hdr" onclick="document.getElementById('${cid}').classList.toggle('hidden')"><h4>${cat} (${filtered.length})</h4><span class="total">${catLabel}</span></div>`;
+const isUsdBk=broker.usdView||false;
+if(isUsdBk){
+h+=`<div id="${cid}"><table class="tbl"><tr><th>Concepto</th><th>Descripción</th><th class="r">USD Nominales</th><th class="r">Valor en Pesos (MEP)</th></tr>`;
+}else{
+h+=`<div id="${cid}"><table class="tbl"><tr><th>Ticker</th><th>Descripción</th><th class="r">Cantidad</th><th class="r">Costo Compra</th><th class="r">Precio 27/02</th><th class="r">Precio Actual</th><th class="r">Valor Actual</th><th class="r">P&L %</th><th class="r">P&L $</th><th>Desde</th></tr>`;
+}
+
+filtered.forEach(it=>{
+const oi=items.indexOf(it);
+const cp=gP(bk,cat,oi);
+if(isUsdBk){
+const usdVal=it.usd||0;
+h+=`<tr><td class="tk">${it.tk}</td><td style="color:var(--muted)">${it.d}</td>`;
+h+=`<td class="r mono" style="font-weight:700;color:var(--green)">USD ${usdVal.toLocaleString('es-AR',{minimumFractionDigits:2})}</td>`;
+h+=`<td class="r mono" style="font-weight:700">${F(it.v)}</td></tr>`;
+return;
+}
+const kx=`${bk}_${cat}_${oi}`;const cv=cV(it,cp,SP[kx]!==undefined);
+const vp=it.bp&&cp?((cp-it.bp)/it.bp*100):null;
+const isA=!!it.gf;
+const isF=!!it.fixed;
+const iid=`p_${bk}_${cat}_${oi}`;
+
+const cs=COSTS[bk==='provincia'?'P_'+it.tk:it.tk]||COSTS[it.tk];
+const costP=cs?cs.c:null;
+const pnlPct=costP&&cp?((cp-costP)/costP*100):null;
+const pnlVal=costP&&it.q?(it.q*(cp-costP)):null;
+const desde=cs?cs.d:'-';
+h+=`<tr><td class="tk">${it.tk}</td><td style="color:var(--muted)">${it.d}</td>`;
+h+=`<td class="r mono">${it.q!=null?it.q.toLocaleString('es-AR'):'-'}</td>`;
+h+=`<td class="r mono" style="color:var(--muted)">${costP!=null?(it.usd?'USD '+costP.toLocaleString('es-AR'):'$ '+costP.toLocaleString('es-AR')):'-'}</td>`;
+h+=`<td class="r mono">${it.bp!=null?(it.usd?'USD '+it.bp.toLocaleString('es-AR'):'$ '+it.bp.toLocaleString('es-AR')):'-'}</td>`;
+if(it.usd){
+const usdV=it.usdVal||0;const arsV=it.arsVal||0;
+h+=`<td class="r mono" style="color:var(--green)">USD ${usdV.toLocaleString('es-AR')}</td>`;
+h+=`<td class="r mono" style="font-weight:700">${F(arsV)}</td>`;
+const uPnl=costP&&it.bp?((it.bp-costP)/costP*100):null;
+h+=`<td class="r mono ${uPnl!=null?(uPnl>=0?'g':'rd'):''}" style="font-weight:600">${uPnl!=null?P(uPnl):'-'}</td>`;
+h+=`<td class="r">—</td><td style="font-size:10px;color:var(--muted)">${desde}</td>`;
+}else if(isF){
+h+=`<td class="r mono" style="color:var(--muted)">—</td>`;
+h+=`<td class="r mono" style="font-weight:700">${F(cv)}</td>`;
+h+=`<td class="r">—</td><td class="r">—</td><td>—</td>`;
+}else{
+h+=`<td class="r"><input id="${iid}" value="${cp!=null?cp:''}" onchange="oPC('${bk}','${cat}',${oi},this.value)" ${isA?'style="color:var(--green);border-color:rgba(74,222,128,.3)"':''}/></td>`;
+h+=`<td class="r mono" style="font-weight:700">${F(cv)}</td>`;
+h+=`<td class="r mono ${pnlPct!=null?(pnlPct>=0?'g':'rd'):''}" style="font-weight:600">${pnlPct!=null?P(pnlPct):'-'}</td>`;
+h+=`<td class="r mono ${pnlVal!=null?(pnlVal>=0?'g':'rd'):''}" style="font-weight:600;font-size:10px">${pnlVal!=null?F(pnlVal):'-'}</td>`;
+h+=`<td style="font-size:10px;color:var(--muted)">${desde}</td>`;
+}
+h+=`</tr>`;
+});
+h+=`</table></div></div>`;
+});
+contentEl.innerHTML=h;
+}
+
+function oPC(b,c,i,v){const n=parseFloat(v.replace(/\./g,'').replace(',','.'));if(!isNaN(n)){sP(b,c,i,n);rB(b)}}
+function doSave(){localStorage.setItem('mp2',JSON.stringify(SP));const s=document.getElementById('ss');if(s){s.style.display='inline';setTimeout(()=>s.style.display='none',2000)}}
+
+rT();rR();
+
+// ===== LIVE PRICE FETCHING =====
+const YAHOO_MAP={};
+// Build map from DATA gf fields
+Object.entries(DATA).forEach(([bk,{cats}])=>{
+Object.entries(cats).forEach(([cat,{i:items}])=>{
+items.forEach((it,idx)=>{
+if(it.gf){
+const tk=it.gf.split(':')[1];
+YAHOO_MAP[`${bk}_${cat}_${idx}`]={yf:tk+'.BA',tk:it.tk,bk,cat,idx};
+}});});});
+
+let LIVE={};let LIVE_TS=null;
+
+function loadScript(url){
+return new Promise(function(resolve){
+var cb='_p'+Math.random().toString(36).substr(2,7);
+var done=false;
+window[cb]=function(data){done=true;resolve(data);delete window[cb]};
+var s=document.createElement('script');
+s.src=url+'&callback='+cb;
+s.onload=function(){setTimeout(function(){if(!done){resolve(null);delete window[cb]}},3000);s.remove()};
+s.onerror=function(){resolve(null);delete window[cb];s.remove()};
+document.body.appendChild(s);
+});
+}
+
+async function fetchLive(){
+var GAS='https://script.google.com/macros/s/AKfycbzKrPoxCmWkRb4Rwq_o8dAT4FE6L0svk5_dJl6QPMvkFhaQAlzgqfgBHhzzO07egyNNiQ/exec';
+var tickers=Object.values(YAHOO_MAP).map(function(m){return m.yf});
+var unique=[];
+tickers.forEach(function(t){if(unique.indexOf(t)===-1)unique.push(t)});
+var statusEl=document.getElementById('liveStatus');
+if(statusEl){statusEl.textContent='Buscando '+unique.length+' precios...';statusEl.style.color='var(--yellow)';statusEl.style.display='inline'}
+var count=0;
+
+for(var i=0;i<unique.length;i+=8){
+var batch=unique.slice(i,i+8);
+var url=GAS+'?symbols='+batch.join(',');
+var data=await loadScript(url);
+if(data){
+var keys=Object.keys(data);
+for(var k=0;k<keys.length;k++){
+if(data[keys[k]]&&data[keys[k]].price){
+LIVE[keys[k]]=data[keys[k]].price;
+count++;
+}
+}
+}
+if(statusEl)statusEl.textContent='Actualizando... '+count+'/'+unique.length;
+}
+
+LIVE_TS=new Date();
+var mapKeys=Object.keys(YAHOO_MAP);
+for(var m=0;m<mapKeys.length;m++){
+var key=mapKeys[m];
+var info=YAHOO_MAP[key];
+var price=LIVE[info.yf];
+if(price){SP[info.bk+'_'+info.cat+'_'+info.idx]=price}
+}
+if(count>0)localStorage.setItem('mp2',JSON.stringify(SP));
+if(statusEl){
+if(count>0){statusEl.textContent=count+' precios actualizados — '+LIVE_TS.toLocaleTimeString('es-AR');statusEl.style.color='var(--green)'}
+else{statusEl.textContent='Error de conexión. Verificá tu internet e intentá de nuevo.';statusEl.style.color='var(--red)'}
+statusEl.style.display='inline';
+}
+if(count>0)rR();
+}
+
+
+
+// Auto-fetch on load
+setTimeout(fetchLive,1000);
+
+</script>
+</body>
+</html>
