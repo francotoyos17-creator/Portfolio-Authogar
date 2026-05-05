@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portfolio Monitor — Casimiro Félix Toyos e Hijos S.A.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=JetBrains+Mono:wght@400;500;600&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg: #0d1117; --bg-2: #161b22; --bg-3: #1c2128; --bg-card: #161b22;
+  --border: #30363d; --border-soft: #21262d;
+  --text: #e6edf3; --text-2: #8b949e; --text-3: #6e7681;
+  --accent: #d4af37; --accent-soft: #d4af3722;
+  --green: #3fb950; --green-soft: #2ea04322;
+  --red: #f85149; --red-soft: #f8514922;
+  --blue: #58a6ff;
+  --serif: 'Fraunces', Georgia, serif;
+  --mono: 'JetBrains Mono', 'SF Mono', Menlo, monospace;
+  --sans: 'Inter Tight', system-ui, sans-serif;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 14px; line-height: 1.5; letter-spacing: -0.01em; min-height: 100vh; }
+body::before { content: ''; position: fixed; inset: 0; background: radial-gradient(circle at 20% 0%, rgba(212,175,55,0.04) 0%, transparent 50%), radial-gradient(circle at 80% 100%, rgba(88,166,255,0.03) 0%, transparent 50%); pointer-events: none; z-index: 0; }
+.container { max-width: 1440px; margin: 0 auto; padding: 32px 24px 80px; position: relative; z-index: 1; }
+.header { border-bottom: 1px solid var(--border); padding-bottom: 32px; margin-bottom: 40px; }
+.brand-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
+.brand-line { display: flex; align-items: center; gap: 12px; }
+.brand-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 12px var(--accent); }
+.brand { font-family: var(--serif); font-weight: 500; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--text-3); }
+.timestamp { font-family: var(--mono); font-size: 11px; color: var(--text-3); letter-spacing: 0.05em; }
+h1 { font-family: var(--serif); font-size: 56px; font-weight: 400; letter-spacing: -0.03em; line-height: 1.05; margin-bottom: 16px; }
+h1 em { font-style: italic; color: var(--accent); font-weight: 400; }
+.subtitle { font-size: 16px; color: var(--text-2); max-width: 720px; }
+.hero-metrics { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 1px; background: var(--border); border: 1px solid var(--border); margin-bottom: 56px; }
+.hero-metric { background: var(--bg-card); padding: 28px 32px; display: flex; flex-direction: column; gap: 12px; }
+.hero-metric.primary { background: linear-gradient(135deg, var(--bg-2) 0%, var(--bg-3) 100%); position: relative; overflow: hidden; }
+.hero-metric.primary::after { content: ''; position: absolute; top: 0; right: 0; width: 200px; height: 200px; background: radial-gradient(circle, rgba(212,175,55,0.06) 0%, transparent 70%); pointer-events: none; }
+.metric-label { font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--text-3); font-weight: 500; }
+.metric-value { font-family: var(--serif); font-size: 38px; font-weight: 400; line-height: 1; letter-spacing: -0.02em; }
+.hero-metric.primary .metric-value { font-size: 52px; }
+.metric-sub { font-family: var(--mono); font-size: 12px; color: var(--text-2); letter-spacing: 0.02em; }
+.metric-pl { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.metric-pl .pct { font-family: var(--mono); font-size: 14px; font-weight: 500; }
+.green { color: var(--green); } .red { color: var(--red); }
+.section { margin-bottom: 56px; }
+.section-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+.section-title { font-family: var(--serif); font-size: 28px; font-weight: 500; letter-spacing: -0.02em; }
+.section-title .num { font-family: var(--mono); font-size: 11px; color: var(--text-3); margin-right: 12px; letter-spacing: 0.1em; font-weight: 400; }
+.section-meta { font-family: var(--mono); font-size: 11px; color: var(--text-3); letter-spacing: 0.05em; text-transform: uppercase; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px; }
+.card { background: var(--bg-card); border: 1px solid var(--border); padding: 24px; }
+.card-title { font-family: var(--serif); font-size: 18px; font-weight: 500; margin-bottom: 16px; letter-spacing: -0.01em; }
+.card-subtitle { font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 4px; }
+table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 12px; }
+thead { border-bottom: 1px solid var(--border); }
+th { text-align: left; font-family: var(--sans); font-weight: 500; font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-3); padding: 10px 12px; white-space: nowrap; }
+th.right { text-align: right; }
+td { padding: 10px 12px; border-bottom: 1px solid var(--border-soft); color: var(--text); }
+td.right { text-align: right; font-variant-numeric: tabular-nums; }
+td.ticker { font-weight: 600; color: var(--accent); }
+td.muted { color: var(--text-2); font-size: 11px; }
+tr:hover td { background: var(--bg-3); }
+tbody tr:last-child td { border-bottom: none; }
+.chart-container { position: relative; height: 260px; }
+.stat-block { border-left: 2px solid var(--accent); padding: 4px 0 4px 16px; }
+.stat-label { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-3); margin-bottom: 6px; }
+.stat-value { font-family: var(--serif); font-size: 24px; font-weight: 500; letter-spacing: -0.01em; }
+.stat-row { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 16px; }
+.tag { display: inline-block; padding: 2px 8px; border-radius: 2px; font-family: var(--mono); font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; }
+.tag-bajo { background: var(--green-soft); color: var(--green); }
+.tag-medio { background: rgba(212,175,55,0.12); color: var(--accent); }
+.tag-alto { background: var(--red-soft); color: var(--red); }
+.tag-usa { background: rgba(88,166,255,0.12); color: var(--blue); }
+.tag-latam { background: rgba(212,175,55,0.12); color: var(--accent); }
+.nav { position: sticky; top: 0; z-index: 10; background: rgba(13,17,23,0.85); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); padding: 14px 0; margin: 0 -24px 32px; }
+.nav-inner { max-width: 1440px; margin: 0 auto; padding: 0 24px; display: flex; gap: 32px; flex-wrap: wrap; }
+.nav a { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-3); text-decoration: none; font-weight: 500; transition: color 0.2s; }
+.nav a:hover { color: var(--accent); }
+.bar-row { display: grid; grid-template-columns: 130px 1fr 80px; gap: 12px; align-items: center; margin-bottom: 12px; font-family: var(--mono); font-size: 12px; }
+.bar-track { height: 6px; background: var(--bg-3); overflow: hidden; }
+.bar-fill { height: 100%; background: var(--accent); transition: width 1s ease; }
+.bar-fill.green { background: var(--green); } .bar-fill.red { background: var(--red); } .bar-fill.blue { background: var(--blue); }
+.footer { border-top: 1px solid var(--border); padding-top: 32px; margin-top: 64px; display: flex; justify-content: space-between; font-family: var(--mono); font-size: 10px; color: var(--text-3); letter-spacing: 0.08em; text-transform: uppercase; flex-wrap: wrap; gap: 12px; }
+@media (max-width: 1024px) {
+  .hero-metrics, .grid-2, .grid-3, .stat-row { grid-template-columns: 1fr 1fr; }
+  h1 { font-size: 40px; }
+  .hero-metric.primary .metric-value { font-size: 38px; }
+}
+@media (max-width: 640px) {
+  .hero-metrics, .grid-2, .grid-3, .stat-row { grid-template-columns: 1fr; }
+  h1 { font-size: 32px; }
+  .container { padding: 24px 16px; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header class="header">
+    <div class="brand-row">
+      <div class="brand-line">
+        <span class="brand-dot"></span>
+        <span class="brand">Casimiro Félix Toyos e Hijos S.A.</span>
+      </div>
+      <span class="timestamp">SNAPSHOT — 04/05/2026</span>
+    </div>
+    <h1>Portfolio <em>Monitor</em></h1>
+    <p class="subtitle">Vista consolidada de tenencia, valuación y performance al cierre del día. Snapshot estático actualizado manualmente.</p>
+  </header>
+
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="#overview">Overview</a>
+      <a href="#allocation">Allocation</a>
+      <a href="#renta-fija">Renta Fija</a>
+      <a href="#renta-variable">Renta Variable</a>
+      <a href="#cedears">CEDEARs</a>
+    </div>
+  </nav>
+
+  <div class="hero-metrics" id="overview">
+    <div class="hero-metric primary">
+      <div class="metric-label">Tenencia Total</div>
+      <div class="metric-value">$7.616,0<span style="font-size:24px;color:var(--text-3);"> M</span></div>
+      <div class="metric-pl">
+        <span class="green">+$1.261,3 M</span>
+        <span class="pct green">+19,85%</span>
+        <span class="metric-sub">vs costo</span>
+      </div>
+    </div>
+    <div class="hero-metric">
+      <div class="metric-label">TC MEP</div>
+      <div class="metric-value">$1.438,24</div>
+      <div class="metric-sub">Cable: $1.493,46</div>
+    </div>
+    <div class="hero-metric">
+      <div class="metric-label">Renta Variable</div>
+      <div class="metric-value">36,7<span style="font-size:24px;color:var(--text-3);">%</span></div>
+      <div class="metric-sub">$2.792,4 M</div>
+    </div>
+    <div class="hero-metric">
+      <div class="metric-label">Renta Fija</div>
+      <div class="metric-value">63,3<span style="font-size:24px;color:var(--text-3);">%</span></div>
+      <div class="metric-sub">$4.823,6 M</div>
+    </div>
+  </div>
+
+  <section class="section" id="allocation">
+    <div class="section-header">
+      <h2 class="section-title"><span class="num">01</span>Asset Allocation</h2>
+      <span class="section-meta">Top 10 holdings</span>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-subtitle">Distribución general</div>
+        <div class="card-title">Renta Fija vs Variable</div>
+        <div class="chart-container"><canvas id="rfRvChart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-subtitle">Top 10 holdings</div>
+        <div class="card-title">Concentración de cartera</div>
+        <table>
+          <thead><tr><th>Ticker</th><th>Tipo</th><th class="right">Valor</th><th class="right">Peso</th></tr></thead>
+          <tbody>
+            <tr>
+              <td class="ticker">YPFD (P)</td>
+              <td class="muted">Acción ARG</td>
+              <td class="right">$899,0M</td>
+              <td class="right"><strong>11,80%</strong></td>
+            </tr>
+            <tr>
+              <td class="ticker">RAICES 7x24</td>
+              <td class="muted">FCI</td>
+              <td class="right">$482,7M</td>
+              <td class="right"><strong>6,34%</strong></td>
+            </tr>
+            <tr>
+              <td class="ticker">LECAPSA</td>
+              <td class="muted">FCI ARS</td>
+              <td class="right">$403,2M</td>
+              <td class="right"><strong>5,29%</strong></td>
+            </tr>
+            <tr>
+              <td class="ticker">PAMP (P)</td>
+              <td class="muted">Acción ARG</td>
+              <td class="right">$401,1M</td>
+              <td class="right"><strong>5,27%</strong></td>
+            </tr>
+            <tr>
+              <td class="ticker">ESTRA1A</td>
+              <td class="muted">FCI USD</td>
+              <td class="right">$310,6M</td>
+              <td class="right"><strong>4,08%</strong></td>
+            </tr>
+            <tr>
+              <td class="ticker">AL30 (P)</td>
+              <td class="muted">Bono</td>
+              <td class="right">$302,8M</td>
+              <td class="right"><strong>3,98%</strong></td>
+            </tr>
+            <tr>
+              <td class="ticker">BAHUSDA</td>
+              <td class="muted">FCI USD</td>
+              <td class="right">$268,9M</td>
+              <td class="right"><strong>3,53%</strong></td>
+            </tr>
+            <tr>
+              <td class="ticker">GGAL (P)</td>
+              <td class="muted">Acción ARG</td>
+              <td class="right">$209,4M</td>
+              <td class="right"><strong>2,75%</strong></td>
+            </tr>
+            <tr>
+              <td class="ticker">LONGPesosA</td>
+              <td class="muted">FCI ARS</td>
+              <td class="right">$191,8M</td>
+              <td class="right"><strong>2,52%</strong></td>
+            </tr>
+            <tr>
+              <td class="ticker">YPFD (B)</td>
+              <td class="muted">Acción ARG</td>
+              <td class="right">$176,9M</td>
+              <td class="right"><strong>2,32%</strong></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="grid-3" style="margin-top: 24px;">
+      <div class="card">
+        <div class="card-subtitle">Por broker</div>
+        <div class="card-title">Distribución por entidad</div>
+        <div class="chart-container"><canvas id="brokerChart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-subtitle">Renta Fija</div>
+        <div class="card-title">Tipo de instrumento</div>
+        <div class="chart-container"><canvas id="rfTypeChart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-subtitle">Renta Variable</div>
+        <div class="card-title">Subcategoría</div>
+        <div class="chart-container"><canvas id="rvTypeChart"></canvas></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="renta-fija">
+    <div class="section-header">
+      <h2 class="section-title"><span class="num">02</span>Renta Fija</h2>
+      <span class="section-meta">$4.824 M total</span>
+    </div>
+    <div class="stat-row" style="margin-bottom: 24px;">
+      <div class="stat-block">
+        <div class="stat-label">Bonos Soberanos</div>
+        <div class="stat-value">$1.375M</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-label">Obligaciones Negociables</div>
+        <div class="stat-value">$350M</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-label">FCIs Pesos</div>
+        <div class="stat-value">$1.696M</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-label">FCIs USD (en ARS)</div>
+        <div class="stat-value">$879M</div>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">Bonos Soberanos · Top 12</div>
+        <table>
+          <thead><tr><th>Ticker</th><th class="right">Valor</th><th class="right">P&L</th></tr></thead>
+          <tbody>
+            <tr><td class="ticker">GD41</td><td class="right">$101,1M</td><td class="right green">+21,0%</td></tr>
+            <tr><td class="ticker">TTD26</td><td class="right">$99,7M</td><td class="right green">+48,2%</td></tr>
+            <tr><td class="ticker">TX26</td><td class="right">$60,1M</td><td class="right green">+31,4%</td></tr>
+            <tr><td class="ticker">BPOA7</td><td class="right">$51,5M</td><td class="right red">-2,6%</td></tr>
+            <tr><td class="ticker">BPOD7</td><td class="right">$38,0M</td><td class="right green">+3,0%</td></tr>
+            <tr><td class="ticker">GD35</td><td class="right">$37,5M</td><td class="right green">+100,5%</td></tr>
+            <tr><td class="ticker">AL30</td><td class="right">$36,6M</td><td class="right green">+135,3%</td></tr>
+            <tr><td class="ticker">T15E7</td><td class="right">$34,0M</td><td class="right green">+5,0%</td></tr>
+            <tr><td class="ticker">TTS26</td><td class="right">$25,1M</td><td class="right green">+29,2%</td></tr>
+            <tr><td class="ticker">T30A7</td><td class="right">$24,7M</td><td class="right green">+2,5%</td></tr>
+            <tr><td class="ticker">T30J6</td><td class="right">$24,7M</td><td class="right green">+1,2%</td></tr>
+            <tr><td class="ticker">AE38</td><td class="right">$24,3M</td><td class="right green">+14,6%</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card">
+        <div class="card-title">ONs Corporativas</div>
+        <table>
+          <thead><tr><th>Ticker</th><th class="right">Valor</th><th class="right">P&L</th></tr></thead>
+          <tbody>
+            <tr><td class="ticker">YM34O</td><td class="right">$121,2M</td><td class="right green">+8,9%</td></tr>
+            <tr><td class="ticker">IRCPO</td><td class="right">$67,3M</td><td class="right green">+11,2%</td></tr>
+            <tr><td class="ticker">TLCPO</td><td class="right">$59,9M</td><td class="right green">+3,9%</td></tr>
+            <tr><td class="ticker">YMCIO</td><td class="right">$28,5M</td><td class="right green">+42,4%</td></tr>
+            <tr><td class="ticker">IRCFO</td><td class="right">$23,3M</td><td class="right green">+21,7%</td></tr>
+            <tr><td class="ticker">PLC4O</td><td class="right">$19,4M</td><td class="right green">+7,9%</td></tr>
+            <tr><td class="ticker">YFCJO</td><td class="right">$15,3M</td><td class="right green">+7,7%</td></tr>
+            <tr><td class="ticker">VSCVO</td><td class="right">$14,8M</td><td class="right green">+7,0%</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="grid-2" style="margin-top: 24px;">
+      <div class="card">
+        <div class="card-title">FCIs · Balanz</div>
+        <table>
+          <thead><tr><th>Ticker</th><th class="right">Valor</th><th class="right">P&L</th></tr></thead>
+          <tbody>
+            <tr><td class="ticker">LECAPSA</td><td class="right">$403,2M</td><td class="right green">+5,9%</td></tr>
+            <tr><td class="ticker">LONGPesosA</td><td class="right">$191,8M</td><td class="right green">+18,1%</td></tr>
+            <tr><td class="ticker">BCMMA</td><td class="right">$171,3M</td><td class="right green">+5,3%</td></tr>
+            <tr><td class="ticker">BCAHA</td><td class="right">$80,9M</td><td class="right green">+1,8%</td></tr>
+            <tr><td class="ticker">INSTITUA</td><td class="right">$77,4M</td><td class="right green">+1,7%</td></tr>
+            <tr><td class="ticker">SOJAA</td><td class="right">$75,2M</td><td class="right red">-4,3%</td></tr>
+            <tr><td class="ticker">OPPORA</td><td class="right">$70,6M</td><td class="right green">+1,2%</td></tr>
+            <tr><td class="ticker">BCRFA</td><td class="right">$47,8M</td><td class="right red">-1,2%</td></tr>
+            <tr><td class="ticker">BCAPYB</td><td class="right">$38,6M</td><td class="right green">+17,0%</td></tr>
+            <tr><td class="ticker">CPRIVADOA</td><td class="right">$29,5M</td><td class="right green">+2,3%</td></tr>
+            <tr><td class="ticker">PER3A</td><td class="right">$26,5M</td><td class="right green">+2,0%</td></tr>
+            <tr><td class="ticker">ESTRA1A <span class="muted">USD</span></td><td class="right">$310,6M</td><td class="right green">+1,3%</td></tr>
+            <tr><td class="ticker">BCMMUSDA <span class="muted">USD</span></td><td class="right">$176,9M</td><td class="right green">+0,3%</td></tr>
+            <tr><td class="ticker">BAHUSDA <span class="muted">USD</span></td><td class="right">$268,9M</td><td class="right green">+3,6%</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card">
+        <div class="card-title">Letras del Tesoro</div>
+        <table>
+          <thead><tr><th>Ticker</th><th class="right">Valor</th><th class="right">P&L</th></tr></thead>
+          <tbody>
+            <tr><td class="ticker">S30N6</td><td class="right">$70,2M</td><td class="right green">+9,5%</td></tr>
+            <tr><td class="ticker">S31G6</td><td class="right">$68,7M</td><td class="right green">+7,3%</td></tr>
+            <tr><td class="ticker">S29Y6</td><td class="right">$67,3M</td><td class="right green">+5,8%</td></tr>
+            <tr><td class="ticker">S30O6</td><td class="right">$23,7M</td><td class="right green">+2,2%</td></tr>
+            <tr><td class="ticker">S30S6</td><td class="right">$23,3M</td><td class="right green">+1,3%</td></tr>
+            <tr><td class="ticker">S17L6</td><td class="right">$23,3M</td><td class="right green">+1,8%</td></tr>
+            <tr><td class="ticker">S15Y6</td><td class="right">$23,3M</td><td class="right green">+1,5%</td></tr>
+            <tr><td class="ticker">X29Y6</td><td class="right">$11,1M</td><td class="right green">+4,9%</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="renta-variable">
+    <div class="section-header">
+      <h2 class="section-title"><span class="num">03</span>Renta Variable Argentina</h2>
+      <span class="section-meta">$2.094 M · 20 acciones BYMA</span>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">Distribución por sector</div>
+        <div class="chart-container"><canvas id="argSectorChart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Holdings principales</div>
+        <table>
+          <thead><tr><th>Ticker</th><th>Sector</th><th class="right">Valor</th><th class="right">P&L</th></tr></thead>
+          <tbody>
+            <tr><td class="ticker">YPFD</td><td class="muted">Energía</td><td class="right">$899,0M</td><td class="right green">+139,9%</td></tr>
+            <tr><td class="ticker">PAMP</td><td class="muted">Energía</td><td class="right">$401,1M</td><td class="right green">+86,2%</td></tr>
+            <tr><td class="ticker">GGAL</td><td class="muted">Bancos</td><td class="right">$209,4M</td><td class="right green">+21,5%</td></tr>
+            <tr><td class="ticker">YPFD</td><td class="muted">Energía</td><td class="right">$176,9M</td><td class="right green">+91,0%</td></tr>
+            <tr><td class="ticker">PAMP</td><td class="muted">Energía</td><td class="right">$80,3M</td><td class="right green">+53,0%</td></tr>
+            <tr><td class="ticker">SUPV</td><td class="muted">Bancos</td><td class="right">$48,7M</td><td class="right red">-19,8%</td></tr>
+            <tr><td class="ticker">TGSU2</td><td class="muted">Energía</td><td class="right">$47,4M</td><td class="right green">+13,5%</td></tr>
+            <tr><td class="ticker">METR</td><td class="muted">Energía</td><td class="right">$45,3M</td><td class="right red">-9,9%</td></tr>
+            <tr><td class="ticker">BMA</td><td class="muted">Bancos</td><td class="right">$39,0M</td><td class="right red">-1,9%</td></tr>
+            <tr><td class="ticker">METR</td><td class="muted">Energía</td><td class="right">$27,2M</td><td class="right green">+3,5%</td></tr>
+            <tr><td class="ticker">TGNO4</td><td class="muted">Energía</td><td class="right">$21,0M</td><td class="right green">+38,3%</td></tr>
+            <tr><td class="ticker">CRES</td><td class="muted">Consumo</td><td class="right">$18,1M</td><td class="right green">+79,7%</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="cedears">
+    <div class="section-header">
+      <h2 class="section-title"><span class="num">04</span>CEDEARs</h2>
+      <span class="section-meta">$670 M · Beta ponderado 2,04</span>
+    </div>
+    <div class="grid-3">
+      <div class="card">
+        <div class="card-title">Sectores</div>
+        <div class="chart-container"><canvas id="cedSectorChart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">País / Región</div>
+        <div class="chart-container"><canvas id="cedPaisChart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Nivel de riesgo</div>
+        <div class="chart-container"><canvas id="cedRiesgoChart"></canvas></div>
+      </div>
+    </div>
+    <div class="card" style="margin-top: 24px;">
+      <div class="card-title">Detalle CEDEARs · 19 instrumentos</div>
+      <table>
+        <thead><tr>
+          <th>Ticker</th><th>Empresa</th><th>Sector</th><th>País</th>
+          <th class="right">Beta</th><th>Riesgo</th><th class="right">Valor</th><th class="right">P&L</th><th class="right">Peso</th>
+        </tr></thead>
+        <tbody>
+          <tr>
+            <td class="ticker">MSTR</td>
+            <td class="muted">MSTR</td>
+            <td>Crypto</td>
+            <td><span class="tag tag-usa">USA</span></td>
+            <td class="right">3,80</td>
+            <td><span class="tag tag-alto">Alto</span></td>
+            <td class="right">$149,4M</td>
+            <td class="right red">-18,7%</td>
+            <td class="right">22,3%</td>
+          </tr>
+          <tr>
+            <td class="ticker">IBIT</td>
+            <td class="muted">IBIT</td>
+            <td>Crypto</td>
+            <td><span class="tag tag-usa">USA</span></td>
+            <td class="right">3,00</td>
+            <td><span class="tag tag-alto">Alto</span></td>
+            <td class="right">$59,7M</td>
+            <td class="right red">-19,6%</td>
+            <td class="right">8,9%</td>
+          </tr>
+          <tr>
+            <td class="ticker">NVDA</td>
+            <td class="muted">NVDA</td>
+            <td>Tech</td>
+            <td><span class="tag tag-usa">USA</span></td>
+            <td class="right">1,70</td>
+            <td><span class="tag tag-alto">Alto</span></td>
+            <td class="right">$54,3M</td>
+            <td class="right green">+8,6%</td>
+            <td class="right">8,1%</td>
+          </tr>
+          <tr>
+            <td class="ticker">MELI</td>
+            <td class="muted">MELI</td>
+            <td>Tech</td>
+            <td><span class="tag tag-latam">LatAm</span></td>
+            <td class="right">1,55</td>
+            <td><span class="tag tag-alto">Alto</span></td>
+            <td class="right">$53,1M</td>
+            <td class="right red">-11,5%</td>
+            <td class="right">7,9%</td>
+          </tr>
+          <tr>
+            <td class="ticker">COIN</td>
+            <td class="muted">COIN</td>
+            <td>Crypto</td>
+            <td><span class="tag tag-usa">USA</span></td>
+            <td class="right">3,50</td>
+            <td><span class="tag tag-alto">Alto</span></td>
+            <td class="right">$43,0M</td>
+            <td class="right red">-13,2%</td>
+            <td class="right">6,4%</td>
+          </tr>
+          <tr>
+            <td class="ticker">META</td>
+            <td class="muted">META</td>
+            <td>Tech</td>
+            <td><span class="tag tag-usa">USA</span></td>
+            <td class="right">1,20</td>
+            <td><span class="tag tag-medio">Medio</span></td>
+            <td class="right">$40,1M</td>
+            <td class="right red">-9,5%</td>
+            <td class="right">6,0%</td>
+          </tr>
+          <tr>
+            <td class="ticker">KO</td>
+            <td class="muted">KO</td>
+            <td>Consumo</td>
+            <td><span class="tag tag-usa">USA</span></td>
+            <td class="right">0,55</td>
+            <td><span class="tag tag-bajo">Bajo</span></td>
+            <td class="right">$39,7M</td>
+            <td class="right red">-1,2%</td>
+            <td class="right">5,9%</td>
+          </tr>
+          <tr>
+            <td class="ticker">LLY</td>
+            <td class="muted">LLY</td>
+            <td>Salud</td>
+            <td><span class="tag tag-usa">USA</span></td>
+            <td class="right">0,45</td>
+            <td><span class="tag tag-bajo">Bajo</span></td>
+            <td class="right">$35,6M</td>
+            <td class="right red">-10,8%</td>
+            <td class="right">5,3%</td>
+          </tr>
+          <tr>
+            <td class="ticker">NU</td>
+            <td class="muted">NU</td>
+            <td>Bancos</td>
+            <td><span class="tag tag-latam">LatAm</span></td>
+            <td class="right">1,65</td>
+            <td><span class="tag tag-alto">Alto</span></td>
+            <td class="right">$31,5M</td>
+            <td class="right green">+1,6%</td>
+            <td class="right">4,7%</td>
+          </tr>
+          <tr>
+            <td class="ticker">MSFT</td>
+            <td class="muted">MSFT</td>
+            <td>Tech</td>
+            <td><span class="tag tag-usa">USA</span></td>
+            <td class="right">0,90</td>
+            <td><span class="tag tag-medio">Medio</span></td>
+            <td class="right">$30,7M</td>
+            <td class="right red">-1,5%</td>
+            <td class="right">4,6%</td>
+          </tr>
+          <tr>
+            <td class="ticker">BRKB</td>
+            <td class="muted">BRKB</td>
+            <td>Consumo</td>
+            <td><span class="tag tag-usa">USA</span></td>
+            <td class="right">0,87</td>
+            <td><span class="tag tag-bajo">Bajo</span></td>
+            <td class="right">$29,7M</td>
+            <td class="right red">-7,1%</td>
+            <td class="right">4,4%</td>
+          </tr>
+          <tr>
+            <td class="ticker">V</td>
+            <td class="muted">V</td>
+            <td>Bancos</td>
+            <td><span class="tag tag-usa">USA</span></td>
+            <td class="right">0,95</td>
+            <td><span class="tag tag-bajo">Bajo</span></td>
+            <td class="right">$27,3M</td>
+            <td class="right red">-5,7%</td>
+            <td class="right">4,1%</td>
+          </tr>
+          <tr>
+            <td class="ticker">JPM</td>
+            <td class="muted">JPM</td>
+            <td>Bancos</td>
+            <td><span class="tag tag-usa">USA</span></td>
+            <td class="right">1,10</td>
+            <td><span class="tag tag-medio">Medio</span></td>
+            <td class="right">$23,4M</td>
+            <td class="right red">-6,2%</td>
+            <td class="right">3,5%</td>
+          </tr>
+          <tr>
+            <td class="ticker">SLV</td>
+            <td class="muted">SLV</td>
+            <td>Industria</td>
+            <td><span class="tag tag-usa">USA</span></td>
+            <td class="right">0,35</td>
+            <td><span class="tag tag-medio">Medio</span></td>
+            <td class="right">$21,4M</td>
+            <td class="right green">+1,7%</td>
+            <td class="right">3,2%</td>
+          </tr>
+          <tr>
+            <td class="ticker">LMT</td>
+            <td class="muted">LMT</td>
+            <td>Industria</td>
+            <td><span class="tag tag-usa">USA</span></td>
+            <td class="right">0,45</td>
+            <td><span class="tag tag-bajo">Bajo</span></td>
+            <td class="right">$10,4M</td>
+            <td class="right green">+1,4%</td>
+            <td class="right">1,6%</td>
+          </tr>
+          <tr>
+            <td class="ticker">RTX</td>
+            <td class="muted">RTX</td>
+            <td>Industria</td>
+            <td><span class="tag tag-usa">USA</span></td>
+            <td class="right">0,60</td>
+            <td><span class="tag tag-bajo">Bajo</span></td>
+            <td class="right">$10,3M</td>
+            <td class="right green">+0,4%</td>
+            <td class="right">1,5%</td>
+          </tr>
+          <tr>
+            <td class="ticker">ETHA</td>
+            <td class="muted">ETHA</td>
+            <td>Crypto</td>
+            <td><span class="tag tag-usa">USA</span></td>
+            <td class="right">3,20</td>
+            <td><span class="tag tag-alto">Alto</span></td>
+            <td class="right">$9,1M</td>
+            <td class="right red">-22,6%</td>
+            <td class="right">1,4%</td>
+          </tr>
+          <tr>
+            <td class="ticker">NFLX</td>
+            <td class="muted">NFLX</td>
+            <td>Consumo</td>
+            <td><span class="tag tag-usa">USA</span></td>
+            <td class="right">1,30</td>
+            <td><span class="tag tag-medio">Medio</span></td>
+            <td class="right">$0,6M</td>
+            <td class="right red">-1,7%</td>
+            <td class="right">0,1%</td>
+          </tr>
+          <tr>
+            <td class="ticker">GLOB</td>
+            <td class="muted">GLOB</td>
+            <td>Tech</td>
+            <td><span class="tag tag-latam">LatAm</span></td>
+            <td class="right">1,40</td>
+            <td><span class="tag tag-alto">Alto</span></td>
+            <td class="right">$0,3M</td>
+            <td class="right red">-14,6%</td>
+            <td class="right">0,1%</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="grid-2" style="margin-top: 24px;">
+      <div class="card">
+        <div class="card-subtitle">Sensibilidad de mercado</div>
+        <div class="card-title">Si el S&P 500 se mueve…</div>
+        <div style="margin-top: 16px;">
+          <div style="display:flex; justify-content:space-between; padding: 14px 0; border-bottom: 1px solid var(--border-soft);">
+            <span style="font-family:var(--mono); font-size:13px;">S&P +10%</span>
+            <span class="green" style="font-family:var(--serif); font-size:18px; font-weight:500;">+$136,4M</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; padding: 14px 0; border-bottom: 1px solid var(--border-soft);">
+            <span style="font-family:var(--mono); font-size:13px;">S&P −10%</span>
+            <span class="red" style="font-family:var(--serif); font-size:18px; font-weight:500;">−$136,4M</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; padding: 14px 0; border-bottom: 1px solid var(--border-soft);">
+            <span style="font-family:var(--mono); font-size:13px;">S&P +20%</span>
+            <span class="green" style="font-family:var(--serif); font-size:18px; font-weight:500;">+$272,8M</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; padding: 14px 0; border-bottom: 1px solid var(--border-soft);">
+            <span style="font-family:var(--mono); font-size:13px;">S&P −20%</span>
+            <span class="red" style="font-family:var(--serif); font-size:18px; font-weight:500;">−$272,8M</span>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-subtitle">Métricas clave</div>
+        <div class="card-title">Diagnóstico CEDEARs</div>
+        <div style="margin-top: 16px;">
+          <div class="bar-row">
+            <span style="color:var(--text-2);">Beta ponderado</span>
+            <div class="bar-track"><div class="bar-fill red" style="width:68%"></div></div>
+            <span style="text-align:right; font-weight:600;">2,04</span>
+          </div>
+          <div class="bar-row">
+            <span style="color:var(--text-2);">% Crypto</span>
+            <div class="bar-track"><div class="bar-fill red" style="width:39%"></div></div>
+            <span style="text-align:right; font-weight:600;">39,0%</span>
+          </div>
+          <div class="bar-row">
+            <span style="color:var(--text-2);">% Tech</span>
+            <div class="bar-track"><div class="bar-fill blue" style="width:27%"></div></div>
+            <span style="text-align:right; font-weight:600;">26,7%</span>
+          </div>
+          <div class="bar-row">
+            <span style="color:var(--text-2);">% USA</span>
+            <div class="bar-track"><div class="bar-fill green" style="width:87%"></div></div>
+            <span style="text-align:right; font-weight:600;">87,3%</span>
+          </div>
+          <div class="bar-row">
+            <span style="color:var(--text-2);">% Riesgo Alto</span>
+            <div class="bar-track"><div class="bar-fill red" style="width:60%"></div></div>
+            <span style="text-align:right; font-weight:600;">59,8%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <span>Snapshot · 04/05/2026 · TC MEP $1.438,24</span>
+    <span>Casimiro Félix Toyos e Hijos S.A.</span>
+  </footer>
+
+</div>
+
+<script>
+Chart.defaults.font.family = "'Inter Tight', system-ui, sans-serif";
+Chart.defaults.font.size = 11;
+Chart.defaults.color = '#8b949e';
+Chart.defaults.borderColor = '#30363d';
+Chart.defaults.plugins.legend.labels.color = '#e6edf3';
+Chart.defaults.plugins.legend.labels.padding = 12;
+Chart.defaults.plugins.legend.labels.usePointStyle = true;
+Chart.defaults.plugins.legend.labels.boxWidth = 8;
+Chart.defaults.plugins.legend.labels.boxHeight = 8;
+Chart.defaults.plugins.legend.position = 'right';
+
+const palette = { gold: '#d4af37', blue: '#58a6ff', green: '#3fb950', red: '#f85149', purple: '#bc8cff', cyan: '#39c5cf', orange: '#ff966d', pink: '#ff7eb6', yellow: '#e3b341', gray: '#6e7681' };
+const palArr = Object.values(palette);
+
+const fmtMoney = (v) => {
+  if (v >= 1e9) return '$' + (v/1e9).toFixed(2).replace('.',',') + 'B';
+  if (v >= 1e6) return '$' + (v/1e6).toFixed(1).replace('.',',') + 'M';
+  if (v >= 1e3) return '$' + (v/1e3).toFixed(0) + 'K';
+  return '$' + v.toFixed(0);
+};
+
+const baseDoughnut = (data) => ({
+  type: 'doughnut',
+  data,
+  options: {
+    responsive: true, maintainAspectRatio: false, cutout: '60%',
+    plugins: {
+      legend: { position: 'right' },
+      tooltip: { callbacks: { label: (ctx) => ctx.label + ': ' + fmtMoney(ctx.parsed) }}
+    }
+  }
+});
+
+new Chart(document.getElementById('rfRvChart'), baseDoughnut({
+  labels: ['Renta Fija', 'Renta Variable'],
+  datasets: [{ data: [4823643554,2792388148], backgroundColor: [palette.blue, palette.gold], borderColor: '#161b22', borderWidth: 3 }]
+}));
+
+new Chart(document.getElementById('brokerChart'), baseDoughnut({
+  labels: ['Balanz', 'Provincia', 'MDP', 'Galicia', 'USD Líq.'],
+  datasets: [{ data: [4499247562,2902831450,30516090,66865446,116571153], backgroundColor: [palette.gold, palette.blue, palette.purple, palette.cyan, palette.green], borderColor: '#161b22', borderWidth: 3 }]
+}));
+
+new Chart(document.getElementById('rfTypeChart'), baseDoughnut({
+  labels: ['Bonos','ONs','FCI Pesos','FCI USD','Letras','Otros'],
+  datasets: [{ data: [1374927523,349750295,1695544456,878661834,310806756,213952689], backgroundColor: [palette.gold, palette.blue, palette.purple, palette.cyan, palette.green, palette.gray], borderColor: '#161b22', borderWidth: 3 }]
+}));
+
+new Chart(document.getElementById('rvTypeChart'), baseDoughnut({
+  labels: ['Acciones ARG','CEDEARs'],
+  datasets: [{ data: [2094239773,698148375], backgroundColor: [palette.gold, palette.blue], borderColor: '#161b22', borderWidth: 3 }]
+}));
+
+new Chart(document.getElementById('argSectorChart'), baseDoughnut({
+  labels: ["Industria", "Bancos", "Energ\u00eda", "Consumo"],
+  datasets: [{ data: [40169744.0, 324722054.0, 1710783837.0, 18564138.0], backgroundColor: palArr, borderColor: '#161b22', borderWidth: 3 }]
+}));
+
+new Chart(document.getElementById('cedSectorChart'), baseDoughnut({
+  labels: ["Consumo", "Crypto", "Tech", "Bancos", "Salud", "Industria"],
+  datasets: [{ data: [70019820.0, 261216300.0, 178528720.0, 82197080.0, 35632940.0, 42080090.0], backgroundColor: palArr, borderColor: '#161b22', borderWidth: 3 }]
+}));
+
+new Chart(document.getElementById('cedPaisChart'), baseDoughnut({
+  labels: ["USA", "LatAm"],
+  datasets: [{ data: [584773900.0, 84901050.0], backgroundColor: [palette.blue, palette.gold], borderColor: '#161b22', borderWidth: 3 }]
+}));
+
+new Chart(document.getElementById('cedRiesgoChart'), baseDoughnut({
+  labels: ['Bajo','Medio','Alto'],
+  datasets: [{ data: [153052370,116213300,400409280], backgroundColor: [palette.green, palette.gold, palette.red], borderColor: '#161b22', borderWidth: 3 }]
+}));
+</script>
+</body>
+</html>

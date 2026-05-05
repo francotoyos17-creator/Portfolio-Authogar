@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Generador de Hashes — Portfolio Monitor</title>
+<script src="https://cdn.jsdelivr.net/npm/bcryptjs@2.4.3/dist/bcrypt.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0d1117; color: #e6edf3;
+  font-family: system-ui, sans-serif;
+  padding: 40px 20px;
+  min-height: 100vh;
+}
+.container { max-width: 700px; margin: 0 auto; }
+h1 { color: #d4af37; margin-bottom: 8px; }
+.note { color: #8b949e; margin-bottom: 24px; font-size: 14px; line-height: 1.5; }
+.card {
+  background: #161b22;
+  border: 1px solid #30363d;
+  padding: 24px;
+  margin-bottom: 16px;
+}
+label { display: block; margin-bottom: 8px; font-size: 12px; text-transform: uppercase; color: #8b949e; letter-spacing: 0.1em; }
+input, textarea {
+  width: 100%;
+  background: #0d1117;
+  border: 1px solid #30363d;
+  color: #e6edf3;
+  padding: 10px 12px;
+  font-family: 'SF Mono', Menlo, monospace;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+textarea { resize: vertical; min-height: 100px; }
+button {
+  background: #d4af37; color: #0d1117;
+  border: none; padding: 12px 24px;
+  font-weight: 600; cursor: pointer;
+  text-transform: uppercase; letter-spacing: 0.05em;
+  font-size: 13px;
+}
+button:hover { opacity: 0.9; }
+.row { display: flex; gap: 12px; align-items: end; margin-bottom: 16px; }
+.row > div { flex: 1; }
+.users-list {
+  background: #0d1117;
+  border: 1px solid #30363d;
+  padding: 12px;
+  font-family: 'SF Mono', monospace;
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  margin-top: 12px;
+  min-height: 80px;
+}
+.copy-btn { background: #58a6ff; margin-top: 8px; }
+.warning { background: #f8514922; border-left: 3px solid #f85149; padding: 12px; margin-bottom: 24px; font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🔐 Generador de Usuarios</h1>
+  <p class="note">Esta página genera el formato correcto para la variable <code>USERS</code> de Railway. Las contraseñas se hashean en tu navegador (no se envían a ningún servidor).</p>
+
+  <div class="warning">
+    <strong>Importante:</strong> Esta página solo funciona localmente. NO la subas a Railway. Después de generar tus usuarios, podés borrarla.
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <div>
+        <label>Usuario</label>
+        <input type="text" id="username" placeholder="franco">
+      </div>
+      <div>
+        <label>Contraseña</label>
+        <input type="password" id="password" placeholder="Mínimo 8 caracteres">
+      </div>
+    </div>
+    <button onclick="addUser()">Agregar usuario</button>
+  </div>
+
+  <div class="card">
+    <label>Usuarios agregados (formato para Railway)</label>
+    <div class="users-list" id="output">(vacío — agregá al menos un usuario)</div>
+    <button class="copy-btn" onclick="copyOutput()">📋 Copiar al portapapeles</button>
+    <button onclick="resetAll()" style="background:#f85149; margin-left:8px;">🗑 Limpiar todo</button>
+  </div>
+
+  <div class="card">
+    <label>Cómo usarlo</label>
+    <ol style="padding-left:20px; color:#8b949e; font-size:14px; line-height:1.7;">
+      <li>Agregá tantos usuarios como necesites (vos, Regina, etc.)</li>
+      <li>Copiá el texto generado</li>
+      <li>En Railway → tu proyecto → Variables → creá variable <code>USERS</code></li>
+      <li>Pegá el texto como valor</li>
+      <li>Railway va a redeployar automáticamente</li>
+    </ol>
+  </div>
+</div>
+
+<script>
+const users = [];
+
+async function addUser() {
+  const u = document.getElementById('username').value.trim();
+  const p = document.getElementById('password').value;
+  if (!u || !p) { alert('Completá usuario y contraseña'); return; }
+  if (p.length < 8) { alert('La contraseña debe tener al menos 8 caracteres'); return; }
+  if (users.some(x => x.user === u)) { alert('Ese usuario ya existe'); return; }
+
+  const salt = await dcodeIO.bcrypt.genSalt(10);
+  const hash = await dcodeIO.bcrypt.hash(p, salt);
+  users.push({ user: u, hash });
+
+  document.getElementById('username').value = '';
+  document.getElementById('password').value = '';
+  document.getElementById('username').focus();
+  render();
+}
+
+function render() {
+  const out = users.map(x => `${x.user}:${x.hash}`).join(';');
+  document.getElementById('output').textContent = out || '(vacío — agregá al menos un usuario)';
+}
+
+function copyOutput() {
+  const text = users.map(x => `${x.user}:${x.hash}`).join(';');
+  if (!text) { alert('No hay usuarios'); return; }
+  navigator.clipboard.writeText(text);
+  alert('✓ Copiado al portapapeles');
+}
+
+function resetAll() {
+  if (!confirm('¿Borrar todos los usuarios?')) return;
+  users.length = 0;
+  render();
+}
+
+document.getElementById('password').addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') addUser();
+});
+</script>
+</body>
+</html>
